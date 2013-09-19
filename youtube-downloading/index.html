@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Youtube Downloading</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Nathaniel Davidson">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+<link href='/assets/stylesheets/bootstrap.min-a418e849ab0655bcbc85c202ec9cb47b.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/style-7b1a725884d2f8136b23369fcf020958.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/google_prettify/sons-of-obsidian-e273df77b6a46e3e66888c9dd886ed55.css' type='text/css' rel='stylesheet' media='all'>
+    <!-- Le fav and touch icons -->
+  <!-- Update these with your own images
+    <link rel="shortcut icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
+  -->
+  </head>
+
+  <body>
+
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container-narrow">
+          <a class="brand" href="/">Synload Development</a>
+          <ul class="nav">
+              
+                <li><a href="/tags">Tags</a></li>
+              
+              
+                <li><a href="/sites">Synload Sites</a></li>
+              
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="content">
+        
+<div class="page-header">
+  <h1>Youtube Downloading </h1>
+</div>
+
+<div class="row-fluid post-full">
+  <div class="span12">
+    <div class="date">
+      <span>2013-03-13</strong>
+    </div>
+    <div class="content">
+      <p><img src="/assets/media/b23bf587009f7342d43cb9cc0f057a30.jpg" class="img" /></p>
+
+<p>Oh man youtube downloading is a pain, well if you know a bit of PHP then this trouble is a thing of the past.</p>
+
+<pre class="prettyprint">
+&lt;?php
+function cmp($a, $b)
+{
+    if ($a['itag'] == $b['itag'])
+    {
+        return 0;
+    }
+    return ($a['itag'] &gt; $b['itag']) ? -1 : 1;
+}
+class YoutubeDownload
+{
+    private $youtubeInfo = array();
+    public $youtubeArrayInfo = array();
+    /*
+    $url variable is the youtube url,
+    then the video ID is parsed out and 
+    the video info is retrieved. 
+    */
+    public function fetch($url)
+    {
+        if (preg_match('/v=([_0-9a-zA-Z]+)/m', $url, $videoID))
+        {
+            $this-&gt;youtubeInfo = explode(&quot;&amp;&quot;,file_get_contents(&quot;http://www.youtube.com/get_video_info?video_id=&quot;.$videoID[1].&quot;&amp;fmt=47&quot;));
+            $this-&gt;parse();
+        }
+        else
+        {
+            $this-&gt;error( &quot;Url not a youtube link!&quot; );
+            return array(
+                &quot;error&quot; =&gt; &quot;Not proper youtube video URL&quot;,
+                &quot;code&quot; =&gt; 1
+            );
+        }
+    }
+    private function parse()
+    {
+        foreach( $this-&gt;youtubeInfo as $arr )
+        {
+            $entry = explode(&quot;=&quot;,$arr);
+            $this-&gt;youtubeArrayInfo[ ( $entry[0] ) ] = urldecode($entry[1]);
+            
+        }
+        $this-&gt;youtubeArrayInfo['streams'] = array();
+        $tmpMap = explode(&quot;,&quot;,$this-&gt;youtubeArrayInfo['url_encoded_fmt_stream_map']);
+        foreach($tmpMap as $tmps)
+        {
+            $tmpEntry = array();
+            $vMap = explode(&quot;&amp;&quot;,$tmps);
+            foreach($vMap as $vs)
+            {
+                $entry = explode(&quot;=&quot;,$vs);
+                $tmpEntry[($entry[0])] = urldecode($entry[1]);
+            }
+            $this-&gt;youtubeArrayInfo['streams'][] = $tmpEntry;
+        }
+        usort($this-&gt;youtubeArrayInfo['streams'], &quot;cmp&quot;);
+    }
+    private function getHighestQuality()
+    {
+        $bestQuality = array();
+        foreach( $this-&gt;youtubeArrayInfo['streams'] as $stream )
+        {
+            if ( preg_match( '/hd1080/m', $stream['quality'] ) )
+            {
+                $bestQuality = $stream;
+            }
+        }
+        if( count( $bestQuality) == 0 )
+        {
+            foreach( $this-&gt;youtubeArrayInfo['streams'] as $stream )
+            {
+                if ( $stream['itag']&gt;46 &amp;&amp; $stream['itag']&lt;48 )
+                {
+                    $bestQuality = $stream;
+                }
+            }
+        }
+        return $bestQuality;
+    }
+    public function download($saveToFile)
+    {
+        $stream = $this-&gt;getHighestQuality();
+        $url = $stream['url'].&quot;&amp;signature=&quot;.$stream['sig'];
+        if ($file = fopen($url, 'rb'))
+        {
+            $fp = fopen($saveToFile, 'w');
+            while(!feof($file) &amp;&amp; (connection_status()==0))
+            {
+                fwrite($fp, fread($file, 1024*8));
+            }
+            fclose($file);
+            fclose($fp);
+        }
+        
+    }
+    private function error($error)
+    {
+        trigger_error($error, E_USER_ERROR);
+    }
+}
+$n = new YoutubeDownload();
+$n-&gt;fetch(&quot;http://www.youtube.com/watch?v=ngxD7IIslg8&amp;list=UUOlqMzbUH_dOtwU_mJn-nsg&amp;index=1&quot;);
+$n-&gt;download(&quot;cookies.webm&quot;);
+</pre>
+
+    </div>
+    <ul class="tag_box inline">
+      <li><i class="icon-folder-open"></i></li>
+    </ul>
+    <ul class="tag_box inline">
+      <li><i class="icon-tags"></i></li>
+    </ul>
+    <hr>
+    <div class="pagination">
+      <ul>
+          <li class="prev"><a href="/sites-development/ruby-on-rails" title="Ruby On Rails">&larr; Previous</a></li>
+
+          <li><a href="/archive">Archive</a></li>
+
+          <li class="next"><a href="/sites-development/paypal-rest-api-class" title="Paypal REST API Class">Next &rarr;</a></li>
+      </ul>
+    </div>
+    <hr>
+    
+  </div>
+</div>
+
+
+      </div>
+
+      <hr>
+      <div class="footer">
+        <p>&copy; Nathaniel Davidson 2013
+          with help from <a href="http://ruhoh.com" target="_blank" title="The Definitive Technical Blogging Framework">ruhoh</a>
+          and <a href="http://twitter.github.com/bootstrap/" target="_blank">Twitter Bootstrap</a>
+        </p>
+      </div>
+
+    </div> <!-- /container -->
+
+    <!-- Google Prettify -->
+<script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/188.0.0/prettify.js"></script>
+<script>
+  var pres = document.getElementsByTagName("pre");
+  for (var i=0; i < pres.length; ++i) {
+    pres[i].className = "prettyprint linenums";
+  }
+  prettyPrint();
+</script>
+<!-- end Google Prettify -->
+    
+  </body>
+</html>
