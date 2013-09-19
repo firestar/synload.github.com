@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<rss version="2.0">
+  <channel>
+    <title>Synload Development</title>
+    <description>Synload Development</description>
+    <link>http://synload.com</link>
+    <pubDate>2013-09-17 07:44:33 -0400</pubDate>
+    <item>
+      <title>Synchronized Video Player</title>
+      <link>http://synload.com/sites-development/synchronized-video-player</link>
+      <pubDate>2013-9-14</pubDate>
+      <description>&lt;p&gt;&lt;img src="/assets/media/lider3.jpg" class="img"&gt;
+&lt;p&gt;So there are many issues that relate to video playback for groups of people. As this is a problem that I have encountered several times, a low cost solution was needed. Using websockets as a medium between the other members of the group. It does this by keeping track of each group members progress in the video.&lt;/p&gt;
+&lt;p&gt;The main issue is how to handle the group timings, should the entire group have the power to tell others to slow down, or to speed up. This would cause several issues some of which are security based. You would have people being able to join a group then forcing people to constantly pause/play, or load other videos. 
+So another solution which was ultimately chosen, a leader based group video player. There would be one leader of a session. The leader controls the groups video players, both manually and automatically. The group members are sent commands to keep up with the leader which are play/pause/seek/loading new videos. This technique keeps the group members synced and watching together within 2 seconds in video progress from the leader ( bandwidth issues can impact the sync % ). When a leader has left the group, the new leader is chosen from the remaining group members in order of who connected.&lt;/p&gt;
+&lt;p&gt;&lt;a href="http://video.synload.com/group"&gt;Link will go here for the video player&lt;/a&gt;&lt;/p&gt;&lt;/p&gt;
+
+&lt;h6&gt;Coded in [ PHP, JAVA, Javascript, Websockets, Ajax ]&lt;/h6&gt;
+</description>
+    </item>
+    <item>
+      <title>Paypal REST API Class</title>
+      <link>http://synload.com/sites-development/paypal-rest-api-class</link>
+      <pubDate>2013-4-28</pubDate>
+      <description>&lt;p&gt;
+&lt;img src="/assets/media/54dcbc07114d9359f8b97242f3f2da11.jpg" class="img" /&gt;
+    &lt;pre class="prettyprint"&gt;
+&amp;lt;?php
+class PayPal{
+    private $auth;
+    private $options;
+    private $tData;
+    private $m;
+    public function __construct($clientID,$secret,$options){
+        $this-&amp;gt;auth=$clientID.&amp;quot;:&amp;quot;.$secret;
+        $this-&amp;gt;grabToken();
+        $this-&amp;gt;options = $options;
+        $this-&amp;gt;m = new Memcached();
+        $this-&amp;gt;m-&amp;gt;addServers(array(
+            array(&amp;#39;127.0.0.1&amp;#39;,11211),
+        ));
+    }
+    private function grabToken(){
+        $tokenReq = curl_init();
+        $postData=&amp;quot;grant_type=client_credentials&amp;quot;;
+        curl_setopt($tokenReq, CURLOPT_URL, 
+            &amp;quot;https://api.sandbox.paypal&amp;quot;.
+            &amp;quot;.com/v1/oauth2/token&amp;quot;
+        ); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                &amp;quot;Accept: application/json&amp;quot;,
+                &amp;quot;Accept-Language: en_US&amp;quot;,
+                &amp;quot;Content-length: &amp;quot;.strlen($postData)
+            )
+        ); 
+        curl_setopt($tokenReq, CURLOPT_USERPWD, $this-&amp;gt;auth);
+        curl_setopt($tokenReq, CURLOPT_POST,true); 
+        curl_setopt($tokenReq, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        $this-&amp;gt;tData = json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    }
+    private function request($uri,$postData){
+        $postData = json_encode($postData);
+        $tokenReq = curl_init();
+        curl_setopt($tokenReq, CURLOPT_URL, &amp;quot;https://api.sandbox.paypal.com&amp;quot;.$uri); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        if(strlen($postData)!=0){
+            curl_setopt($tokenReq, CURLOPT_POST,true);
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                &amp;quot;Content-Type: application/json&amp;quot;,
+                &amp;quot;Accept-Language: en_US&amp;quot;,
+                &amp;quot;Authorization:Bearer &amp;quot;.$this-&amp;gt;tData-&amp;gt;access_token,
+                &amp;quot;Content-length: &amp;quot;.strlen($postData)
+                )
+            );
+            curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        }else{
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                    &amp;quot;Content-Type: application/json&amp;quot;,
+                    &amp;quot;Accept-Language: en_US&amp;quot;,
+                    &amp;quot;Authorization:Bearer &amp;quot;.$this-&amp;gt;tData-&amp;gt;access_token
+                )
+            ); 
+            curl_setopt($curl_handle, CURLOPT_HTTPGET, TRUE);
+        }
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        return json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    } 
+    public function createPayment($price,$description){
+        $f=[
+            &amp;quot;intent&amp;quot;=&amp;gt;&amp;quot;sale&amp;quot;,
+            &amp;quot;payer&amp;quot;=&amp;gt;[
+                &amp;quot;payment_method&amp;quot;=&amp;gt;&amp;quot;paypal&amp;quot;
+            ],
+            &amp;quot;redirect_urls&amp;quot;=&amp;gt;[
+                &amp;quot;return_url&amp;quot;=&amp;gt;$this-&amp;gt;options[&amp;#39;return&amp;#39;],
+                &amp;quot;cancel_url&amp;quot;=&amp;gt;$this-&amp;gt;options[&amp;#39;cancel&amp;#39;]
+            ],
+            &amp;quot;transactions&amp;quot;=&amp;gt;[
+                [
+                    &amp;quot;amount&amp;quot;=&amp;gt;[
+                        &amp;quot;total&amp;quot;=&amp;gt;$price,
+                        &amp;quot;currency&amp;quot;=&amp;gt;&amp;quot;USD&amp;quot;
+                    ],
+                    &amp;quot;description&amp;quot;=&amp;gt;$description
+                ]
+            ]
+        ];
+        $data = $this-&amp;gt;request(&amp;quot;/v1/payments/payment/&amp;quot;,$f);
+        if (
+            preg_match(
+                &amp;#39;%^https://www\.sandbox\.paypal\.com/&amp;#39;.
+                &amp;#39;cgi-bin/webscr\?cmd=_express-checkout&amp;amp;token=(.*?)$%&amp;#39;,
+                $data-&amp;gt;links[1]-&amp;gt;href, 
+                $regs
+            )
+        ){
+            $this-&amp;gt;m-&amp;gt;delete($regs[1]);
+            $this-&amp;gt;m-&amp;gt;add($regs[1],$data-&amp;gt;id,600);
+        }
+        return [ $data-&amp;gt;links[1]-&amp;gt;href, $data ];
+    }
+    public function checkPayment(){
+        $f=[&amp;quot;payer_id&amp;quot; =&amp;gt; ($_GET[&amp;#39;PayerID&amp;#39;]) ];
+        $req = $this-&amp;gt;request(&amp;quot;/v1/payments/payment/&amp;quot;.$this-&amp;gt;m-&amp;gt;get($_GET[&amp;#39;token&amp;#39;]).&amp;quot;/execute/&amp;quot;,$f);
+        $return_class =  new $this-&amp;gt;options[&amp;#39;dataClass&amp;#39;];
+        $return_class-&amp;gt;payment([ 
+            &amp;quot;state&amp;quot; =&amp;gt; $req-&amp;gt;state, 
+            &amp;quot;stateSale&amp;quot; =&amp;gt; $req-&amp;gt;transactions[0]-&amp;gt;related_resources[0]-&amp;gt;sale-&amp;gt;state, 
+            &amp;quot;id&amp;quot; =&amp;gt; $req-&amp;gt;id, 
+            &amp;quot;payer&amp;quot; =&amp;gt; $req-&amp;gt;payer, 
+            &amp;quot;txn&amp;quot; =&amp;gt; $req-&amp;gt;transactions[0]-&amp;gt;related_resources[0]-&amp;gt;sale-&amp;gt;id,
+            &amp;quot;raw&amp;quot; =&amp;gt; $req
+        ]);
+    }
+    public function IPN(){
+        $return_class =  new $this-&amp;gt;options[&amp;#39;dataClass&amp;#39;];
+        $return_class-&amp;gt;paymentIPN($_POST);
+    }
+}
+    &lt;/pre&gt;
+&lt;/p&gt;
+</description>
+    </item>
+    <item>
+      <title>Youtube Downloading</title>
+      <link>http://synload.com/youtube-downloading</link>
+      <pubDate>2013-03-13</pubDate>
+      <description>&lt;p&gt;&lt;img src="/assets/media/b23bf587009f7342d43cb9cc0f057a30.jpg" class="img" /&gt;&lt;/p&gt;
+
+&lt;p&gt;Oh man youtube downloading is a pain, well if you know a bit of PHP then this trouble is a thing of the past.&lt;/p&gt;
+
+&lt;pre class="prettyprint"&gt;
+&amp;lt;?php
+function cmp($a, $b)
+{
+    if ($a['itag'] == $b['itag'])
+    {
+        return 0;
+    }
+    return ($a['itag'] &amp;gt; $b['itag']) ? -1 : 1;
+}
+class YoutubeDownload
+{
+    private $youtubeInfo = array();
+    public $youtubeArrayInfo = array();
+    /*
+    $url variable is the youtube url,
+    then the video ID is parsed out and 
+    the video info is retrieved. 
+    */
+    public function fetch($url)
+    {
+        if (preg_match('/v=([_0-9a-zA-Z]+)/m', $url, $videoID))
+        {
+            $this-&amp;gt;youtubeInfo = explode(&amp;quot;&amp;amp;&amp;quot;,file_get_contents(&amp;quot;http://www.youtube.com/get_video_info?video_id=&amp;quot;.$videoID[1].&amp;quot;&amp;amp;fmt=47&amp;quot;));
+            $this-&amp;gt;parse();
+        }
+        else
+        {
+            $this-&amp;gt;error( &amp;quot;Url not a youtube link!&amp;quot; );
+            return array(
+                &amp;quot;error&amp;quot; =&amp;gt; &amp;quot;Not proper youtube video URL&amp;quot;,
+                &amp;quot;code&amp;quot; =&amp;gt; 1
+            );
+        }
+    }
+    private function parse()
+    {
+        foreach( $this-&amp;gt;youtubeInfo as $arr )
+        {
+            $entry = explode(&amp;quot;=&amp;quot;,$arr);
+            $this-&amp;gt;youtubeArrayInfo[ ( $entry[0] ) ] = urldecode($entry[1]);
+            
+        }
+        $this-&amp;gt;youtubeArrayInfo['streams'] = array();
+        $tmpMap = explode(&amp;quot;,&amp;quot;,$this-&amp;gt;youtubeArrayInfo['url_encoded_fmt_stream_map']);
+        foreach($tmpMap as $tmps)
+        {
+            $tmpEntry = array();
+            $vMap = explode(&amp;quot;&amp;amp;&amp;quot;,$tmps);
+            foreach($vMap as $vs)
+            {
+                $entry = explode(&amp;quot;=&amp;quot;,$vs);
+                $tmpEntry[($entry[0])] = urldecode($entry[1]);
+            }
+            $this-&amp;gt;youtubeArrayInfo['streams'][] = $tmpEntry;
+        }
+        usort($this-&amp;gt;youtubeArrayInfo['streams'], &amp;quot;cmp&amp;quot;);
+    }
+    private function getHighestQuality()
+    {
+        $bestQuality = array();
+        foreach( $this-&amp;gt;youtubeArrayInfo['streams'] as $stream )
+        {
+            if ( preg_match( '/hd1080/m', $stream['quality'] ) )
+            {
+                $bestQuality = $stream;
+            }
+        }
+        if( count( $bestQuality) == 0 )
+        {
+            foreach( $this-&amp;gt;youtubeArrayInfo['streams'] as $stream )
+            {
+                if ( $stream['itag']&amp;gt;46 &amp;amp;&amp;amp; $stream['itag']&amp;lt;48 )
+                {
+                    $bestQuality = $stream;
+                }
+            }
+        }
+        return $bestQuality;
+    }
+    public function download($saveToFile)
+    {
+        $stream = $this-&amp;gt;getHighestQuality();
+        $url = $stream['url'].&amp;quot;&amp;amp;signature=&amp;quot;.$stream['sig'];
+        if ($file = fopen($url, 'rb'))
+        {
+            $fp = fopen($saveToFile, 'w');
+            while(!feof($file) &amp;amp;&amp;amp; (connection_status()==0))
+            {
+                fwrite($fp, fread($file, 1024*8));
+            }
+            fclose($file);
+            fclose($fp);
+        }
+        
+    }
+    private function error($error)
+    {
+        trigger_error($error, E_USER_ERROR);
+    }
+}
+$n = new YoutubeDownload();
+$n-&amp;gt;fetch(&amp;quot;http://www.youtube.com/watch?v=ngxD7IIslg8&amp;amp;list=UUOlqMzbUH_dOtwU_mJn-nsg&amp;amp;index=1&amp;quot;);
+$n-&amp;gt;download(&amp;quot;cookies.webm&amp;quot;);
+&lt;/pre&gt;
+</description>
+    </item>
+    <item>
+      <title>Ruby On Rails</title>
+      <link>http://synload.com/sites-development/ruby-on-rails</link>
+      <pubDate>2012-10-21</pubDate>
+      <description>&lt;p&gt;
+So here we are, another developers blog.. This blog will contain updates on my personal projects and discovery. This will include code snippets and links + tutorials on how to accomplish specific tasks on the internet without having to go through the annoying bits yourself. I will be providing tools soon that will make setting up linux servers a lot simpler.&lt;br /&gt;
+&lt;br /&gt;
+&lt;img src='/assets/media/284620a9f4bfcd510378e106ea4224af.jpg' class="img" /&gt;
+&lt;br /&gt;
+Now a bit about Ruby on Rails, my thoughts and opinions on the wonder language. I have been messing around with ruby on rails for the past few months, and to put it best as a few words.. The ease of use is just an amazing change to the mess known as PHP! I will still continue to work with PHP, but will be switching my personal projects to Ruby with Rails as the frontend interface.&lt;/p&gt;
+</description>
+    </item>
+  </channel>
+</rss>

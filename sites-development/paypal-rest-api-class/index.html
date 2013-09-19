@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Paypal REST API Class</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Nathaniel Davidson">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+<link href='/assets/stylesheets/bootstrap.min-a418e849ab0655bcbc85c202ec9cb47b.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/style-7b1a725884d2f8136b23369fcf020958.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/google_prettify/sons-of-obsidian-e273df77b6a46e3e66888c9dd886ed55.css' type='text/css' rel='stylesheet' media='all'>
+    <!-- Le fav and touch icons -->
+  <!-- Update these with your own images
+    <link rel="shortcut icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
+  -->
+  </head>
+
+  <body>
+
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container-narrow">
+          <a class="brand" href="/">Synload Development</a>
+          <ul class="nav">
+              
+                <li><a href="/tags">Tags</a></li>
+              
+              
+                <li><a href="/sites">Synload Sites</a></li>
+              
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="content">
+        
+<div class="page-header">
+  <h1>Paypal REST API Class </h1>
+</div>
+
+<div class="row-fluid post-full">
+  <div class="span12">
+    <div class="date">
+      <span>2013-4-28</strong>
+    </div>
+    <div class="content">
+      <p>
+<img src="/assets/media/54dcbc07114d9359f8b97242f3f2da11.jpg" class="img" />
+    <pre class="prettyprint">
+&lt;?php
+class PayPal{
+    private $auth;
+    private $options;
+    private $tData;
+    private $m;
+    public function __construct($clientID,$secret,$options){
+        $this-&gt;auth=$clientID.&quot;:&quot;.$secret;
+        $this-&gt;grabToken();
+        $this-&gt;options = $options;
+        $this-&gt;m = new Memcached();
+        $this-&gt;m-&gt;addServers(array(
+            array(&#39;127.0.0.1&#39;,11211),
+        ));
+    }
+    private function grabToken(){
+        $tokenReq = curl_init();
+        $postData=&quot;grant_type=client_credentials&quot;;
+        curl_setopt($tokenReq, CURLOPT_URL, 
+            &quot;https://api.sandbox.paypal&quot;.
+            &quot;.com/v1/oauth2/token&quot;
+        ); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                &quot;Accept: application/json&quot;,
+                &quot;Accept-Language: en_US&quot;,
+                &quot;Content-length: &quot;.strlen($postData)
+            )
+        ); 
+        curl_setopt($tokenReq, CURLOPT_USERPWD, $this-&gt;auth);
+        curl_setopt($tokenReq, CURLOPT_POST,true); 
+        curl_setopt($tokenReq, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        $this-&gt;tData = json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    }
+    private function request($uri,$postData){
+        $postData = json_encode($postData);
+        $tokenReq = curl_init();
+        curl_setopt($tokenReq, CURLOPT_URL, &quot;https://api.sandbox.paypal.com&quot;.$uri); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        if(strlen($postData)!=0){
+            curl_setopt($tokenReq, CURLOPT_POST,true);
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                &quot;Content-Type: application/json&quot;,
+                &quot;Accept-Language: en_US&quot;,
+                &quot;Authorization:Bearer &quot;.$this-&gt;tData-&gt;access_token,
+                &quot;Content-length: &quot;.strlen($postData)
+                )
+            );
+            curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        }else{
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                    &quot;Content-Type: application/json&quot;,
+                    &quot;Accept-Language: en_US&quot;,
+                    &quot;Authorization:Bearer &quot;.$this-&gt;tData-&gt;access_token
+                )
+            ); 
+            curl_setopt($curl_handle, CURLOPT_HTTPGET, TRUE);
+        }
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        return json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    } 
+    public function createPayment($price,$description){
+        $f=[
+            &quot;intent&quot;=&gt;&quot;sale&quot;,
+            &quot;payer&quot;=&gt;[
+                &quot;payment_method&quot;=&gt;&quot;paypal&quot;
+            ],
+            &quot;redirect_urls&quot;=&gt;[
+                &quot;return_url&quot;=&gt;$this-&gt;options[&#39;return&#39;],
+                &quot;cancel_url&quot;=&gt;$this-&gt;options[&#39;cancel&#39;]
+            ],
+            &quot;transactions&quot;=&gt;[
+                [
+                    &quot;amount&quot;=&gt;[
+                        &quot;total&quot;=&gt;$price,
+                        &quot;currency&quot;=&gt;&quot;USD&quot;
+                    ],
+                    &quot;description&quot;=&gt;$description
+                ]
+            ]
+        ];
+        $data = $this-&gt;request(&quot;/v1/payments/payment/&quot;,$f);
+        if (
+            preg_match(
+                &#39;%^https://www\.sandbox\.paypal\.com/&#39;.
+                &#39;cgi-bin/webscr\?cmd=_express-checkout&amp;token=(.*?)$%&#39;,
+                $data-&gt;links[1]-&gt;href, 
+                $regs
+            )
+        ){
+            $this-&gt;m-&gt;delete($regs[1]);
+            $this-&gt;m-&gt;add($regs[1],$data-&gt;id,600);
+        }
+        return [ $data-&gt;links[1]-&gt;href, $data ];
+    }
+    public function checkPayment(){
+        $f=[&quot;payer_id&quot; =&gt; ($_GET[&#39;PayerID&#39;]) ];
+        $req = $this-&gt;request(&quot;/v1/payments/payment/&quot;.$this-&gt;m-&gt;get($_GET[&#39;token&#39;]).&quot;/execute/&quot;,$f);
+        $return_class =  new $this-&gt;options[&#39;dataClass&#39;];
+        $return_class-&gt;payment([ 
+            &quot;state&quot; =&gt; $req-&gt;state, 
+            &quot;stateSale&quot; =&gt; $req-&gt;transactions[0]-&gt;related_resources[0]-&gt;sale-&gt;state, 
+            &quot;id&quot; =&gt; $req-&gt;id, 
+            &quot;payer&quot; =&gt; $req-&gt;payer, 
+            &quot;txn&quot; =&gt; $req-&gt;transactions[0]-&gt;related_resources[0]-&gt;sale-&gt;id,
+            &quot;raw&quot; =&gt; $req
+        ]);
+    }
+    public function IPN(){
+        $return_class =  new $this-&gt;options[&#39;dataClass&#39;];
+        $return_class-&gt;paymentIPN($_POST);
+    }
+}
+    </pre>
+</p>
+
+    </div>
+    <ul class="tag_box inline">
+      <li><i class="icon-folder-open"></i></li>
+      <li>
+        <a href="/categories#sites development-ref">sites development <span>3</span></a>
+      </li>
+    </ul>
+    <ul class="tag_box inline">
+      <li><i class="icon-tags"></i></li>
+    </ul>
+    <hr>
+    <div class="pagination">
+      <ul>
+          <li class="prev"><a href="/youtube-downloading" title="Youtube Downloading">&larr; Previous</a></li>
+
+          <li><a href="/archive">Archive</a></li>
+
+          <li class="next"><a href="/sites-development/synchronized-video-player" title="Synchronized Video Player">Next &rarr;</a></li>
+      </ul>
+    </div>
+    <hr>
+    
+  </div>
+</div>
+
+
+      </div>
+
+      <hr>
+      <div class="footer">
+        <p>&copy; Nathaniel Davidson 2013
+          with help from <a href="http://ruhoh.com" target="_blank" title="The Definitive Technical Blogging Framework">ruhoh</a>
+          and <a href="http://twitter.github.com/bootstrap/" target="_blank">Twitter Bootstrap</a>
+        </p>
+      </div>
+
+    </div> <!-- /container -->
+
+    <!-- Google Prettify -->
+<script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/188.0.0/prettify.js"></script>
+<script>
+  var pres = document.getElementsByTagName("pre");
+  for (var i=0; i < pres.length; ++i) {
+    pres[i].className = "prettyprint linenums";
+  }
+  prettyPrint();
+</script>
+<!-- end Google Prettify -->
+    
+  </body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Development Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Nathaniel Davidson">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le styles -->
+<link href='/assets/stylesheets/bootstrap.min-a418e849ab0655bcbc85c202ec9cb47b.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/style-7b1a725884d2f8136b23369fcf020958.css' type='text/css' rel='stylesheet' media='all'>
+<link href='/assets/stylesheets/google_prettify/sons-of-obsidian-e273df77b6a46e3e66888c9dd886ed55.css' type='text/css' rel='stylesheet' media='all'>
+    <!-- Le fav and touch icons -->
+  <!-- Update these with your own images
+    <link rel="shortcut icon" href="images/favicon.ico">
+    <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="images/apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="images/apple-touch-icon-114x114.png">
+  -->
+  </head>
+
+  <body>
+
+    <div class="navbar">
+      <div class="navbar-inner">
+        <div class="container-narrow">
+          <a class="brand" href="/">Synload Development</a>
+          <ul class="nav">
+              
+                <li><a href="/tags">Tags</a></li>
+              
+              
+                <li><a href="/sites">Synload Sites</a></li>
+              
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="content">
+        <div class="row-fluid">
+  <div class="span12">
+    <div class="post">
+  <h3 class="title"><a href="/sites-development/synchronized-video-player">Synchronized Video Player</a> <span class="date">2013-9-14</span></h3>
+
+  <div class="summary">
+<p><img src="/assets/media/lider3.jpg" class="img"></p>
+<p>So there are many issues that relate to video playback for groups of people. As this is a problem that I have encountered several times, a low cost solution was needed. Using websockets as a medium between the other members of the group. It does this by keeping track of each group members progress in the video.</p>
+<p>The main issue is how to handle the group timings, should the entire group have the power to tell others to slow down, or to speed up. This would cause several issues some of which are security based. You would have people being able to join a group then forcing people to constantly pause/play, or load other videos. 
+So another solution which was ultimately chosen, a leader based group video player. There would be one leader of a session. The leader controls the groups video players, both manually and automatically. The group members are sent commands to keep up with the leader which are play/pause/seek/loading new videos. This technique keeps the group members synced and watching together within 2 seconds in video progress from the leader ( bandwidth issues can impact the sync % ). When a leader has left the group, the new leader is chosen from the remaining group members in order of who connected.</p>
+<p><a href="http://video.synload.com/group">Link will go here for the video player</a></p>
+
+<h6>Coded in [ PHP, JAVA, Javascript, Websockets, Ajax ]</h6>
+</div>
+
+  <div class="more">
+    <a href="/sites-development/synchronized-video-player" class="btn btn-small">read more..</a>
+  </div>
+</div>
+<div class="post">
+  <h3 class="title"><a href="/sites-development/paypal-rest-api-class">Paypal REST API Class</a> <span class="date">2013-4-28</span></h3>
+
+  <div class="summary">
+<p>
+<img src="/assets/media/54dcbc07114d9359f8b97242f3f2da11.jpg" class="img"></p>
+<pre class="prettyprint">
+&lt;?php
+class PayPal{
+    private $auth;
+    private $options;
+    private $tData;
+    private $m;
+    public function __construct($clientID,$secret,$options){
+        $this-&gt;auth=$clientID.":".$secret;
+        $this-&gt;grabToken();
+        $this-&gt;options = $options;
+        $this-&gt;m = new Memcached();
+        $this-&gt;m-&gt;addServers(array(
+            array('127.0.0.1',11211),
+        ));
+    }
+    private function grabToken(){
+        $tokenReq = curl_init();
+        $postData="grant_type=client_credentials";
+        curl_setopt($tokenReq, CURLOPT_URL, 
+            "https://api.sandbox.paypal".
+            ".com/v1/oauth2/token"
+        ); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                "Accept: application/json",
+                "Accept-Language: en_US",
+                "Content-length: ".strlen($postData)
+            )
+        ); 
+        curl_setopt($tokenReq, CURLOPT_USERPWD, $this-&gt;auth);
+        curl_setopt($tokenReq, CURLOPT_POST,true); 
+        curl_setopt($tokenReq, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        $this-&gt;tData = json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    }
+    private function request($uri,$postData){
+        $postData = json_encode($postData);
+        $tokenReq = curl_init();
+        curl_setopt($tokenReq, CURLOPT_URL, "https://api.sandbox.paypal.com".$uri); 
+        curl_setopt($tokenReq, CURLOPT_PORT , 443); 
+        curl_setopt($tokenReq, CURLOPT_VERBOSE, 0); 
+        curl_setopt($tokenReq, CURLOPT_HEADER, 0); 
+        curl_setopt($tokenReq, CURLOPT_FOLLOWLOCATION, true); 
+        curl_setopt($tokenReq, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($tokenReq, CURLOPT_RETURNTRANSFER, 1); 
+        if(strlen($postData)!=0){
+            curl_setopt($tokenReq, CURLOPT_POST,true);
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                "Content-Type: application/json",
+                "Accept-Language: en_US",
+                "Authorization:Bearer ".$this-&gt;tData-&gt;access_token,
+                "Content-length: ".strlen($postData)
+                )
+            );
+            curl_setopt($tokenReq, CURLOPT_POSTFIELDS,$postData); 
+        }else{
+            curl_setopt($tokenReq, CURLOPT_HTTPHEADER, array(
+                    "Content-Type: application/json",
+                    "Accept-Language: en_US",
+                    "Authorization:Bearer ".$this-&gt;tData-&gt;access_token
+                )
+            ); 
+            curl_setopt($curl_handle, CURLOPT_HTTPGET, TRUE);
+        }
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYHOST, 0); 
+        curl_setopt($tokenReq, CURLOPT_SSL_VERIFYPEER, 0); 
+        return json_decode(curl_exec($tokenReq)); 
+        curl_close($tokenReq);
+    } 
+    public function createPayment($price,$description){
+        $f=[
+            "intent"=&gt;"sale",
+            "payer"=&gt;[
+                "payment_method"=&gt;"paypal"
+            ],
+            "redirect_urls"=&gt;[
+                "return_url"=&gt;$this-&gt;options['return'],
+                "cancel_url"=&gt;$this-&gt;options['cancel']
+            ],
+            "transactions"=&gt;[
+                [
+                    "amount"=&gt;[
+                        "total"=&gt;$price,
+                        "currency"=&gt;"USD"
+                    ],
+                    "description"=&gt;$description
+                ]
+            ]
+        ];
+        $data = $this-&gt;request("/v1/payments/payment/",$f);
+        if (
+            preg_match(
+                '%^https://www\.sandbox\.paypal\.com/'.
+                'cgi-bin/webscr\?cmd=_express-checkout&amp;token=(.*?)$%',
+                $data-&gt;links[1]-&gt;href, 
+                $regs
+            )
+        ){
+            $this-&gt;m-&gt;delete($regs[1]);
+            $this-&gt;m-&gt;add($regs[1],$data-&gt;id,600);
+        }
+        return [ $data-&gt;links[1]-&gt;href, $data ];
+    }
+    public function checkPayment(){
+        $f=["payer_id" =&gt; ($_GET['PayerID']) ];
+        $req = $this-&gt;request("/v1/payments/payment/".$this-&gt;m-&gt;get($_GET['token'])."/execute/",$f);
+        $return_class =  new $this-&gt;options['dataClass'];
+        $return_class-&gt;payment([ 
+            "state" =&gt; $req-&gt;state, 
+            "stateSale" =&gt; $req-&gt;transactions[0]-&gt;related_resources[0]-&gt;sale-&gt;state, 
+            "id" =&gt; $req-&gt;id, 
+            "payer" =&gt; $req-&gt;payer, 
+            "txn" =&gt; $req-&gt;transactions[0]-&gt;related_resources[0]-&gt;sale-&gt;id,
+            "raw" =&gt; $req
+        ]);
+    }
+    public function IPN(){
+        $return_class =  new $this-&gt;options['dataClass'];
+        $return_class-&gt;paymentIPN($_POST);
+    }
+}
+    </pre>
+</div>
+
+  <div class="more">
+    <a href="/sites-development/paypal-rest-api-class" class="btn btn-small">read more..</a>
+  </div>
+</div>
+<div class="post">
+  <h3 class="title"><a href="/youtube-downloading">Youtube Downloading</a> <span class="date">2013-03-13</span></h3>
+
+  <div class="summary">
+<p><img src="/assets/media/b23bf587009f7342d43cb9cc0f057a30.jpg" class="img"></p>
+
+<p>Oh man youtube downloading is a pain, well if you know a bit of PHP then this trouble is a thing of the past.</p>
+
+<pre class="prettyprint">
+&lt;?php
+function cmp($a, $b)
+{
+    if ($a['itag'] == $b['itag'])
+    {
+        return 0;
+    }
+    return ($a['itag'] &gt; $b['itag']) ? -1 : 1;
+}
+class YoutubeDownload
+{
+    private $youtubeInfo = array();
+    public $youtubeArrayInfo = array();
+    /*
+    $url variable is the youtube url,
+    then the video ID is parsed out and 
+    the video info is retrieved. 
+    */
+    public function fetch($url)
+    {
+        if (preg_match('/v=([_0-9a-zA-Z]+)/m', $url, $videoID))
+        {
+            $this-&gt;youtubeInfo = explode("&amp;",file_get_contents("http://www.youtube.com/get_video_info?video_id=".$videoID[1]."&amp;fmt=47"));
+            $this-&gt;parse();
+        }
+        else
+        {
+            $this-&gt;error( "Url not a youtube link!" );
+            return array(
+                "error" =&gt; "Not proper youtube video URL",
+                "code" =&gt; 1
+            );
+        }
+    }
+    private function parse()
+    {
+        foreach( $this-&gt;youtubeInfo as $arr )
+        {
+            $entry = explode("=",$arr);
+            $this-&gt;youtubeArrayInfo[ ( $entry[0] ) ] = urldecode($entry[1]);
+            
+        }
+        $this-&gt;youtubeArrayInfo['streams'] = array();
+        $tmpMap = explode(",",$this-&gt;youtubeArrayInfo['url_encoded_fmt_stream_map']);
+        foreach($tmpMap as $tmps)
+        {
+            $tmpEntry = array();
+            $vMap = explode("&amp;",$tmps);
+            foreach($vMap as $vs)
+            {
+                $entry = explode("=",$vs);
+                $tmpEntry[($entry[0])] = urldecode($entry[1]);
+            }
+            $this-&gt;youtubeArrayInfo['streams'][] = $tmpEntry;
+        }
+        usort($this-&gt;youtubeArrayInfo['streams'], "cmp");
+    }
+    private function getHighestQuality()
+    {
+        $bestQuality = array();
+        foreach( $this-&gt;youtubeArrayInfo['streams'] as $stream )
+        {
+            if ( preg_match( '/hd1080/m', $stream['quality'] ) )
+            {
+                $bestQuality = $stream;
+            }
+        }
+        if( count( $bestQuality) == 0 )
+        {
+            foreach( $this-&gt;youtubeArrayInfo['streams'] as $stream )
+            {
+                if ( $stream['itag']&gt;46 &amp;&amp; $stream['itag']&lt;48 )
+                {
+                    $bestQuality = $stream;
+                }
+            }
+        }
+        return $bestQuality;
+    }
+    public function download($saveToFile)
+    {
+        $stream = $this-&gt;getHighestQuality();
+        $url = $stream['url']."&amp;signature=".$stream['sig'];
+        if ($file = fopen($url, 'rb'))
+        {
+            $fp = fopen($saveToFile, 'w');
+            while(!feof($file) &amp;&amp; (connection_status()==0))
+            {
+                fwrite($fp, fread($file, 1024*8));
+            }
+            fclose($file);
+            fclose($fp);
+        }
+        
+    }
+    private function error($error)
+    {
+        trigger_error($error, E_USER_ERROR);
+    }
+}
+$n = new YoutubeDownload();
+$n-&gt;fetch("http://www.youtube.com/watch?v=ngxD7IIslg8&amp;list=UUOlqMzbUH_dOtwU_mJn-nsg&amp;index=1");
+$n-&gt;download("cookies.webm");
+</pre>
+</div>
+
+  <div class="more">
+    <a href="/youtube-downloading" class="btn btn-small">read more..</a>
+  </div>
+</div>
+<div class="post">
+  <h3 class="title"><a href="/sites-development/ruby-on-rails">Ruby On Rails</a> <span class="date">2012-10-21</span></h3>
+
+  <div class="summary"><p>
+So here we are, another developers blog.. This blog will contain updates on my personal projects and discovery. This will include code snippets and links + tutorials on how to accomplish specific tasks on the internet without having to go through the annoying bits yourself. I will be providing tools soon that will make setting up linux servers a lot simpler.<br><br><img src="/assets/media/284620a9f4bfcd510378e106ea4224af.jpg" class="img"><br>
+Now a bit about Ruby on Rails, my thoughts and opinions on the wonder language. I have been messing around with ruby on rails for the past few months, and to put it best as a few words.. The ease of use is just an amazing change to the mess known as PHP! I will still continue to work with PHP, but will be switching my personal projects to Ruby with Rails as the frontend interface.</p></div>
+
+  <div class="more">
+    <a href="/sites-development/ruby-on-rails" class="btn btn-small">read more..</a>
+  </div>
+</div>
+
+<div class="pagination">
+  <ul>
+      <li class="active"><a href="/">1</a></li>
+  </ul>
+</div>
+
+  </div>
+</div>
+
+      </div>
+
+      <hr>
+      <div class="footer">
+        <p>&copy; Nathaniel Davidson 2013
+          with help from <a href="http://ruhoh.com" target="_blank" title="The Definitive Technical Blogging Framework">ruhoh</a>
+          and <a href="http://twitter.github.com/bootstrap/" target="_blank">Twitter Bootstrap</a>
+        </p>
+      </div>
+
+    </div> <!-- /container -->
+
+    <!-- Google Prettify -->
+<script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/188.0.0/prettify.js"></script>
+<script>
+  var pres = document.getElementsByTagName("pre");
+  for (var i=0; i < pres.length; ++i) {
+    pres[i].className = "prettyprint linenums";
+  }
+  prettyPrint();
+</script>
+<!-- end Google Prettify -->
+    
+  </body>
+</html>
